@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Árbol Animado Día/Noche</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Cargar imágenes
+    const arbolImg = new Image();
+    arbolImg.src = "arbol.png";
+
+    const nubesImg = new Image();
+    nubesImg.src = "nubes.png";
+
+    const solImg = new Image();
+    solImg.src = "sol.png";
+
+    const lunaImg = new Image();
+    lunaImg.src = "luna.png";
+
+    const cieloDiaImg = new Image();
+    cieloDiaImg.src = "cielo.png";
+
+    const cieloNocheImg = new Image();
+    cieloNocheImg.src = "noche.png";
+
+    const cespedImg = new Image();
+    cespedImg.src = "ceped.png";
+
+    // Configuración
+    let tiempo = 0;
+    const duracionCiclo = 40000; // 40 segundos ciclo total (20 día, 20 noche)
+    const grassHeight = canvas.height * 0.19; 
+
+    // Estrellas
+    const estrellas = Array.from({ length: 150 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height * 0.6,
+      r: Math.random() * 1.2
+    }));
+
+    // Pájaros
+    const pajaros = Array.from({ length: 10 }, () => crearPajaro());
+    function crearPajaro() {
+      return {
+        x: Math.random() * canvas.width,
+        y: 100 + Math.random() * (canvas.height / 3),
+        speed: 0.5 + Math.random() * 2
+      };
+    }
+
+    // Animar
+    function animar() {
+      tiempo += 16;
+      const ciclo = (tiempo % duracionCiclo) / duracionCiclo; // 0 → 1
+      const esDia = ciclo < 0.5; // mitad día, mitad noche
+      const progreso = esDia ? ciclo * 2 : (ciclo - 0.5) * 2;
+
+      // Fondo (cielo)
+      if (esDia) {
+        ctx.drawImage(cieloDiaImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.drawImage(cieloNocheImg, 0, 0, canvas.width, canvas.height);
+      }
+
+      // Estrellas (solo noche)
+      if (!esDia) {
+        ctx.fillStyle = "white";
+        estrellas.forEach(e => {
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      // Sol o luna (mismo tamaño)
+      const astroSize = 190; 
+      const astroX = progreso * canvas.width;
+      const astroY = canvas.height * 0.25 + Math.sin(progreso * Math.PI) * -150;
+
+      if (esDia) {
+        ctx.drawImage(solImg, astroX - astroSize / 2, astroY - astroSize / 2, astroSize, astroSize);
+      } else {
+        ctx.drawImage(lunaImg, astroX - astroSize / 2, astroY - astroSize / 2, astroSize, astroSize);
+      }
+
+      // Nubes (scroll infinito, más lentas e independientes del ciclo día/noche)
+      const velocidadNubes = 0.05; // 🔹 ahora más lentas
+      const nubeWidth = 1800;
+      const nubeHeight = 600;
+      const nubeX = -(tiempo * velocidadNubes) % nubeWidth;
+
+      ctx.globalAlpha = esDia ? 1 : 0.7; // de día 100%, de noche 70%
+      ctx.drawImage(nubesImg, nubeX, 120, nubeWidth, nubeHeight);
+      ctx.drawImage(nubesImg, nubeX + nubeWidth, 120, nubeWidth, nubeHeight);
+      ctx.globalAlpha = 1; // restaurar transparencia
+
+      // Pájaros (solo día)
+      if (esDia) {
+        ctx.strokeStyle = "rgba(50,50,50,0.7)"; // gris con transparencia
+        ctx.lineWidth = 3; 
+        const birdScale = 3; // aves grandes y proporcionadas
+
+        pajaros.forEach(p => {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - 10 * birdScale, p.y - 6 * birdScale);
+          ctx.lineTo(p.x - 20 * birdScale, p.y);
+          ctx.stroke();
+
+          p.x += p.speed;
+          if (p.x > canvas.width + 50) {
+            p.x = -30;
+            p.y = 100 + Math.random() * (canvas.height / 3);
+          }
+        });
+        ctx.lineWidth = 1;
+      }
+
+      // Árbol con efecto de "viento"
+      const arbolBaseWidth = canvas.width * 0.55;
+      const arbolBaseHeight = canvas.height * 0.80;
+      const scaleFactor = 1 + Math.sin(tiempo * 0.0005) * 0.01;
+
+      const arbolWidth = arbolBaseWidth * scaleFactor;
+      const arbolHeight = arbolBaseHeight * scaleFactor;
+
+      const arbolX = canvas.width / 2 - arbolWidth / 2;
+      const arbolY = canvas.height - grassHeight - arbolHeight + 120;
+
+      ctx.drawImage(arbolImg, arbolX, arbolY, arbolWidth, arbolHeight);
+
+      // Césped
+      ctx.drawImage(cespedImg, 0, canvas.height - grassHeight, canvas.width, grassHeight);
+
+      requestAnimationFrame(animar);
+    }
+
+    animar();
+
+    // Redimensionar
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
